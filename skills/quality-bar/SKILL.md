@@ -56,4 +56,4 @@ Se um item não pode ser demonstrado, ele não está pronto: está declarado pro
 
 Percentual de entregas revisadas com 100% dos itens aplicáveis demonstrados e evidência registrada.
 
-Parte do Prumb ? prumb.com.br
+Parte do Prumb · prumb.com.br

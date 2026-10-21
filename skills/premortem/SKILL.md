@@ -58,4 +58,4 @@ TOP-3 NO PLANO:
 - Skill [[tradeoffs]] complementa quando mitigação tem custo
 - No Prumb completo, a lente critique cuida disso.
 
-Parte do Prumb ? prumb.com.br
+Parte do Prumb · prumb.com.br

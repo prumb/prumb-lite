@@ -53,7 +53,7 @@ RECOMENDAÇÃO: [A | B] · [por que neste contexto]
 ## Heurística · custo de reverter
 - **Reversível barato:** experimente, decida depois
 - **Reversível caro:** decida com mais cuidado, talvez prototype antes
-- **Irreversível:** demanda análise profunda, premortem, critique, ADR
+- **Irreversível:** demanda análise profunda, [[premortem]] e registro da decisão. No Prumb completo, a lente critique cuida disso.
 
 Categorias geralmente irreversíveis: banco escolhido em produção, modelo de dados base, contratos de API públicos, vendor lock-in.
 
@@ -64,8 +64,8 @@ Categorias geralmente irreversíveis: banco escolhido em produção, modelo de d
 - Empate forçado · declare critério de desempate, não fuja
 
 ## Hand-off
-- Decisão importante → registrar como ADR (formato em `architect`)
-- Trade-off contra-intuitivo → registrar em `lessons.md` na pasta de estado do projeto, obtida com `node "${CLAUDE_PLUGIN_ROOT}/lib/projeto.mjs" estado --criar`
-- Se opção tem risco real → `premortem` daquela opção
+- Decisão importante → registrar a decisão e seus motivos. No Prumb completo, a lente architect cuida disso.
+- Trade-off contra-intuitivo → registrar o aprendizado nas notas do projeto.
+- Se opção tem risco real → [[premortem]] daquela opção
 
-Parte do Prumb ? prumb.com.br
+Parte do Prumb · prumb.com.br
