@@ -1,0 +1,8 @@
+# Arquivos locais e tempor?rios
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db

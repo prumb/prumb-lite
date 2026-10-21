@@ -1,0 +1,19 @@
+{
+  "name": "prumb-lite",
+  "version": "0.1.0",
+  "description": "Tr?s lentes do Prumb e uma trava de seguran?a, gr?tis, para Claude Code e Codex.",
+  "author": {
+    "name": "Gustavo Muci"
+  },
+  "homepage": "https://prumb.com.br",
+  "repository": "https://github.com/prumb/prumb-lite",
+  "license": "MIT",
+  "keywords": [
+    "prumb",
+    "claude-code",
+    "codex",
+    "seguran?a",
+    "qualidade",
+    "planejamento"
+  ]
+}

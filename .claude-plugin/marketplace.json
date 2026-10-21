@@ -1,0 +1,16 @@
+{
+  "name": "prumb",
+  "metadata": {
+    "version": "0.1.0"
+  },
+  "owner": {
+    "name": "Gustavo Muci"
+  },
+  "plugins": [
+    {
+      "name": "prumb-lite",
+      "source": "./",
+      "description": "Tr?s lentes do Prumb e uma trava de seguran?a, gr?tis, para Claude Code e Codex."
+    }
+  ]
+}
