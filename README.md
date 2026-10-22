@@ -26,7 +26,7 @@ No Claude Code, execute:
 ```
 
 ```text
-/plugin install prumb-lite@prumb
+/plugin install prumb-lite@prumb-lite
 ```
 
 Depois, feche e abra o Claude Code.
