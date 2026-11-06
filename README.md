@@ -7,7 +7,7 @@ Três lentes do Prumb e uma trava de segurança, grátis, para Claude Code e Cod
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)](LICENSE)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-compat%C3%ADvel-D97757)
 ![Codex](https://img.shields.io/badge/Codex-compat%C3%ADvel-412991)
-![Versão 0.1.0](https://img.shields.io/badge/vers%C3%A3o-0.1.0-388bfd)
+![Versão 0.2.0](https://img.shields.io/badge/vers%C3%A3o-0.2.0-388bfd)
 
 ## O que é o Prumb
 
@@ -44,7 +44,7 @@ No Codex entram as três lentes; a trava de git é do Claude Code.
 | Lente | O que faz | Quando entra |
 | --- | --- | --- |
 | [tradeoffs](skills/tradeoffs/SKILL.md) | Expõe ganhos, perdas e custo de mudar. | Ao escolher entre alternativas técnicas ou de produto. |
-| [quality-bar](skills/quality-bar/SKILL.md) | Define provas de que a entrega está pronta. | Antes de concluir uma tarefa ou revisar uma entrega. |
+| [quality-bar](skills/quality-bar/SKILL.md) | Define provas de que a entrega está pronta. | Antes de concluir uma tarefa, revisar uma entrega ou escrever a condição de parada de /goal. |
 | [premortem](skills/premortem/SKILL.md) | Antecipa falhas e inclui prevenção no plano. | Antes de construir, publicar ou tomar decisões de arquitetura. |
 | Trava de git | Bloqueia descarte de trabalho não salvo e exclusão de stash existente. | Antes de comandos de descarte no Bash ou PowerShell do Claude Code. |
 
@@ -63,8 +63,11 @@ Nos casos de avaliação do Prumb 0.11.0, as três lentes melhoraram o resultado
 | Lentes | 3 | Lista completa abaixo |
 | Trava de git | Sim | Sim |
 | Outras travas (shell, VPS, higiene) | Não | Sim |
+| Ajudantes (scout, researcher, auditor) | Não | Sim |
+| Comandos /resume e /wrap-up | Não | Sim |
+| Nome e postura do seu agente | Não | Sim |
 | Pacotes Design, Negócio, Codex | Não | Sim |
-| Painel para ligar e desligar | Não | Sim |
+| Painel para conferir, ajustar e atualizar | Não | Sim |
 | Atualizações | Comunidade | 12 meses inclusos |
 | Preço | Grátis | R$ 197 único |
 
@@ -111,6 +114,14 @@ Nos casos de avaliação do Prumb 0.11.0, as três lentes melhoraram o resultado
 ### Huashu
 
 - **huashu-design**: Cria protótipos, apresentações, animações e vídeos com narração.
+
+## Ajudantes do Prumb completo
+
+Agentes que o assistente chama sozinho para gastar menos e errar menos:
+
+- **scout**: Faz a coleta mecânica (contar, listar, ler log) num modelo mais barato.
+- **researcher**: Explora código e documentação a fundo sem lotar a conversa principal.
+- **auditor**: Revisa mudança de alto risco (banco, login, cobrança, publicação) antes de aplicar.
 
 ## Redes
 

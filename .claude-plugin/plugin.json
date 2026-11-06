@@ -1,6 +1,6 @@
 {
   "name": "prumb-lite",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Três lentes do Prumb e uma trava de segurança, grátis, para Claude Code e Codex.",
   "author": {
     "name": "Gustavo Muci"
