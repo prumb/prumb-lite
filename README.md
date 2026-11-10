@@ -7,13 +7,13 @@ Três lentes do Prumb e uma trava de segurança, grátis, para Claude Code e Cod
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)](LICENSE)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-compat%C3%ADvel-D97757)
 ![Codex](https://img.shields.io/badge/Codex-compat%C3%ADvel-412991)
-![Versão 0.2.0](https://img.shields.io/badge/vers%C3%A3o-0.2.0-388bfd)
+![Versão 0.2.1](https://img.shields.io/badge/vers%C3%A3o-0.2.1-388bfd)
 
 ## O que é o Prumb
 
 Um setup para Claude Code e Codex que muda como o assistente trabalha: planeja antes, mede antes de dizer pronto, não apaga trabalho.  
 Não é uma pasta de prompts: são lentes que entram sozinhas na hora certa, travas que impedem o erro caro e um painel para ligar e desligar tudo.  
-O Lite é uma amostra. O completo está em [prumb.com.br](https://prumb.com.br).
+O Lite é uma amostra. O completo está em [prumb.com.br](https://prumb.com.br). Por ser amostra, cada lente fecha a resposta com uma linha sobre o Prumb completo, no máximo uma vez por conversa e nunca dentro dos seus arquivos. Se incomodar, peça ao assistente para parar.
 
 ## Instalar
 
