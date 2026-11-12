@@ -1,109 +1,115 @@
 #!/usr/bin/env node
-// Bloqueia comandos Git que descartam trabalho não salvo ou entradas do stash.
-
 import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-// Só as formas que DESCARTAM a árvore de trabalho.
-//
-// Fora daqui de propósito:
-//   `git checkout <branch>` e `git checkout -b`  · trocam de branch, não apagam nada
-//   `git restore --staged` sozinho               · tira do indice, o arquivo continua la
-//   Com --source ou --worktree, restore entra na guarda: pode apagar trabalho.
-//   `git stash`                                  · esconde, mas e recuperavel com pop
-//   drop e clear sao tratados a parte: so passam com a lista de stash vazia.
-const DESCARTA = [
-  /\bgit\s+checkout\s+(-{2}|\.)/,              // git checkout -- <path> | git checkout .
-  /\bgit\s+checkout\s+\S+\s+--(?:\s|$)/,     // git checkout <ref> -- <path>, inclui HEAD
-  /\bgit\s+checkout\s+HEAD\s+\./,             // git checkout HEAD . tambem restaura arquivos
-  /\bgit\s+checkout\b.*\s(?:-f|--force)(?:\s|$)/, // checkout forcado descarta alteracoes
-  /\bgit\s+restore\s+(?!.*--staged)/,         // git restore <path>
-  /\bgit\s+restore\b.*\s--source(?:=|\s)/,    // restore de outra origem, mesmo com staged
-  /\bgit\s+restore\b.*\s--worktree(?:\s|$)/,  // restore da arvore, mesmo com staged
-  /\bgit\s+switch\b.*\s(?:--discard-changes|-f|--force)(?:\s|$)/, // switch forcado
-  /\bgit\s+reset\s+--hard\b/,                  // apaga a árvore inteira
-  /\bgit\s+clean\s+-[a-z]*f/,                  // apaga arquivo não rastreado
-];
+const PREFIXO = 'Trava do Prumb';
 
-function negar(reason) {
-  return { permissionDecision: 'deny', permissionDecisionReason: reason };
+// O lexer preserva caminhos Windows e separa comandos somente fora de aspas.
+function tokenizar(texto) {
+  const comandos = [];
+  let tokens = [], valor = '', ativo = false, aspas = '', dinamico = false;
+  const fechar = () => {
+    if (ativo) tokens.push({ valor, dinamico });
+    valor = ''; ativo = false; dinamico = false;
+  };
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (aspas) {
+      if (c === aspas) aspas = '';
+      else { valor += c; if (aspas === '"' && /[$`]/.test(c)) dinamico = true; }
+      continue;
+    }
+    if (c === '"' || c === "'") { aspas = c; ativo = true; continue; }
+    if (/[;&|\r\n]/.test(c)) {
+      fechar(); if (tokens.length) comandos.push(tokens); tokens = []; continue;
+    }
+    if (/\s/.test(c)) { fechar(); continue; }
+    ativo = true; valor += c;
+    if (/[$`()]/.test(c)) dinamico = true;
+  }
+  fechar(); if (tokens.length) comandos.push(tokens);
+  return comandos;
 }
 
-function stashes(cwd) {
+function consultar(cwd, args) {
   try {
-    return execFileSync('git', ['stash', 'list'], {
+    return execFileSync('git', args, {
       cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000, windowsHide: true,
     }).trim().split('\n').filter(Boolean);
-  } catch {
-    return null; // Nao deu para conferir: deixa passar.
-  }
-}
-
-function sujo(cwd) {
-  try {
-    const saida = execFileSync('git', ['status', '--porcelain'], {
-      cwd: cwd || process.cwd(),
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 5000,
-      windowsHide: true,
-    });
-    return saida.trim().split('\n').filter(Boolean);
-  } catch {
-    return null; // não é repositório, git ausente, timeout: nada a afirmar
-  }
+  } catch { return null; } // Git ausente, timeout ou fora de repo: sem evidência de perda.
 }
 
 export function avaliarDescarte(payload) {
-  let cmd = '';
-  let cwd = '';
-  try {
-    const entrada = payload?.tool_input ?? {};
-    cmd = String(entrada.command ?? '');
-    cwd = String(payload?.cwd ?? entrada.cwd ?? '');
-  } catch {
-    return null;
-  }
-  if (!cmd.trim()) return null;
-  let alterados;
-  // Cada git tem seu cwd: -C relativo parte do payload, inclusive em comando composto.
-  const comandos = cmd.matchAll(/\bgit\s+((?:-C\s+(?:"[^"]*"|'[^']*'|[^\s;&|]+)\s+)*)[^;&|\r\n]*/g);
-  for (const trecho of comandos) {
-    let alvo = cwd || process.cwd();
-    for (const pasta of trecho[1].matchAll(/-C\s+(?:"([^"]*)"|'([^']*)'|([^\s]+))/g)) {
-      alvo = resolve(alvo, pasta[1] ?? pasta[2] ?? pasta[3]);
-    }
-    const comando = `git ${trecho[0].replace(/^git\s+/, '').slice(trecho[1].length)}`;
-    if (/\bgit\s+stash\s+(drop|clear)\b/.test(comando)) {
-      const entradas = stashes(alvo);
-      if (entradas?.length) {
-        return negar(`Trava do Prumb: existem ${entradas.length} entrada(s) no stash deste repositório. `
-          + 'O stash apagado não volta com pop. Peça confirmação explícita ao dono antes de apagar.');
-      }
+  const entrada = payload?.tool_input ?? {};
+  const cmd = String(entrada.command ?? '');
+  let cwd = resolve(String(payload?.cwd ?? entrada.cwd ?? process.cwd()) || process.cwd());
+  let incerto = false;
+  const pilha = [];
+  const decisao = (tipo, motivo) => ({ permissionDecision: tipo, permissionDecisionReason: `${PREFIXO}: ${motivo}` });
+  for (const tokens of tokenizar(cmd)) {
+    const nome = tokens[0].valor.toLowerCase();
+    if (['cd', 'pushd', 'set-location', 'sl', 'chdir'].includes(nome)) {
+      if (nome === 'pushd') pilha.push({ cwd, incerto });
+      const caminhos = tokens.slice(1).filter(t => !['/d', '-path', '-literalpath'].includes(t.valor.toLowerCase()));
+      if (caminhos.length !== 1 || caminhos[0].dinamico || caminhos[0].valor.startsWith('~')) incerto = true;
+      else cwd = resolve(cwd, caminhos[0].valor);
       continue;
     }
-    if (!DESCARTA.some(rx => rx.test(comando))) continue;
-    const arquivos = sujo(alvo);
-    if (arquivos === null) continue;   // não deu para conferir: deixa passar
-    if (arquivos.length === 0) continue; // árvore limpa: não há o que perder
-    alterados = arquivos;
-    break;
+    if (nome === 'popd' || nome === 'pop-location') {
+      const anterior = pilha.pop();
+      if (anterior) ({ cwd, incerto } = anterior); else incerto = true;
+      continue;
+    }
+    if (!/(?:^|[\\/])git(?:\.exe)?$/i.test(tokens[0].valor)) continue;
+    let alvo = cwd, ambiguo = incerto, i = 1;
+    const globais = [];
+    while (i < tokens.length && tokens[i].valor.startsWith('-')) {
+      const t = tokens[i++];
+      const opcao = t.valor;
+      if (['-C', '-c', '--git-dir', '--work-tree', '--namespace', '--config-env', '--super-prefix'].includes(opcao)) {
+        const v = tokens[i++];
+        if (!v) { ambiguo = true; break; }
+        if (opcao === '-C') { alvo = resolve(alvo, v.valor); ambiguo ||= v.dinamico; }
+        else if (opcao === '--work-tree') { alvo = resolve(alvo, v.valor); ambiguo ||= v.dinamico; globais.push(`--work-tree=${alvo}`); }
+        else { globais.push(opcao, v.valor); ambiguo ||= v.dinamico; }
+      } else if (opcao.startsWith('--work-tree=')) {
+        alvo = resolve(alvo, opcao.slice(12)); ambiguo ||= t.dinamico; globais.push(`--work-tree=${alvo}`);
+      } else globais.push(opcao);
+    }
+    const sub = tokens[i++]?.valor;
+    const args = tokens.slice(i).map(t => t.valor);
+    const opcoes = args.slice(0, args.indexOf('--') < 0 ? args.length : args.indexOf('--'));
+    const tem = (...valores) => valores.some(v => opcoes.includes(v));
+    const stash = sub === 'stash' && ['drop', 'clear'].includes(args.find(v => !v.startsWith('-')));
+    const clean = sub === 'clean' && (tem('--force') || opcoes.some(v => /^-[^-]*f/.test(v)));
+    const descarta = stash || clean || (sub === 'reset' && tem('--hard'))
+      || (sub === 'checkout' && (args.includes('--') || args.includes('.') || tem('-f', '--force')))
+      || (sub === 'restore' && (!tem('--staged', '-S') || tem('--worktree', '-W') || opcoes.some(v => /^--source(?:=|$)/.test(v))))
+      || (sub === 'switch' && tem('-f', '--force', '--discard-changes'));
+    if (!descarta) continue;
+    if (ambiguo) return decisao('ask', 'não foi possível resolver literalmente o diretório do descarte. Confirme o alvo e a perda antes de executar.');
+    // A prévia preserva seleção e caminhos, retirando somente opções de execução.
+    const previa = args.flatMap((v, n) => {
+      const separador = args.indexOf('--');
+      if (separador >= 0 && n >= separador) return [v];
+      if (v.startsWith('-e') || args[n - 1] === '-e' || args[n - 1] === '--exclude') return [v];
+      if (v === '--force' || v === '--dry-run') return [];
+      if (/^-[^-]/.test(v) && !['-e'].includes(v) && args[n - 1] !== '-e' && args[n - 1] !== '--exclude') {
+        const restante = v.replace(/[fn]/g, ''); return restante === '-' ? [] : [restante];
+      }
+      return [v];
+    });
+    const arquivos = consultar(alvo, [...globais, ...(stash ? ['stash', 'list'] : clean ? ['clean', '-n', ...previa] : ['status', '--porcelain'])]);
+    if (!arquivos?.length) continue;
+    if (stash) return decisao('deny', `existem ${arquivos.length} entrada(s) no stash deste repositório. O stash apagado não volta com pop. Peça confirmação explícita ao dono antes de apagar.`);
+    const lista = arquivos.slice(0, 10).map(l => `  ${l}`).join('\n');
+    return decisao('deny', `este comando descarta trabalho não commitado.\n\n${arquivos.length} arquivo(s):\n${lista}`
+      + (arquivos.length > 10 ? `\n  ...e mais ${arquivos.length - 10}` : '')
+      + '\nRestaure de uma CÓPIA antes de quebrar testes, ou peça confirmação explícita ao usuário dizendo o que se perde.');
   }
-  if (!alterados) return null;
-
-  const lista = alterados.slice(0, 8).map((l) => `  ${l}`).join('\n');
-  const resto = alterados.length > 8 ? `\n  ...e mais ${alterados.length - 8}` : '';
-
-  return negar(
-    `Trava do Prumb: este comando descarta trabalho não commitado.\n\n`
-    + `${alterados.length} arquivo(s) com alteração não commitada:\n${lista}${resto}\n\n`
-    + `Se a intenção é desfazer uma quebra proposital de teste, restaure de uma CÓPIA, `
-    + `não do git: copie o arquivo antes de quebrá-lo e devolva com "mv". `
-    + `Se a intenção é mesmo jogar fora o que está aí, commite primeiro numa branch `
-    + `descartável, ou peça confirmação explícita ao usuário dizendo o que se perde.`,
-  );
+  return null;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(resolve(process.argv[1]))).href) {

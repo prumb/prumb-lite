@@ -1,3 +1,4 @@
+import { testarAuditoria } from './descarte-auditoria.mjs';
 // Casos de descarte portados de scripts/hooks-test.mjs do Prumb para node --test.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -51,6 +52,7 @@ await t.test('Árvore limpa permite descarte', async () => {
   }
 });
 writeFileSync(join(repo, 'a.txt'), 'original\ntrabalho não salvo\n');
+writeFileSync(join(repo, 'solto.txt'), 'n?o rastreado');
 const destructive = [
   'git checkout -- a.txt', 'git checkout .', 'git checkout HEAD -- a.txt',
   'git restore a.txt', 'git reset --hard', 'git clean -fdx',
@@ -87,6 +89,7 @@ await t.test('Importar o módulo não consome stdin nem escreve', () => {
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, ''); assert.equal(result.stderr, '');
 });
+rmSync(join(repo, 'solto.txt'));
 git('stash', 'push', '-m', 'Fixture');
 for (const command of ['git stash drop', 'git stash clear']) {
   await t.test(`Stash com uma entrada bloqueia: ${command}`, () => {
@@ -112,3 +115,5 @@ for (const input of ['{inválido', 'null', '{}']) {
 }
 
 });
+
+test('Payloads da auditoria', () => testarAuditoria(fileURLToPath(new URL('../hooks/git-descarte.mjs', import.meta.url))));
