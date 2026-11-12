@@ -1,6 +1,6 @@
 ---
 name: quality-bar
-description: Definição verificável de pronto por tipo de entregável. Use antes de dizer "terminei" e ao revisar trabalho de terceiro.
+description: Definição verificável de pronto por tipo de entregável. Use antes de dizer "terminei", ao revisar trabalho de terceiro e ao escrever a condição de parada de /goal ou loop.
 ---
 
 # quality-bar · pronto demonstrável
@@ -51,6 +51,13 @@ Usar antes de declarar uma entrega pronta e na revisão de trabalho de terceiro.
 Rejeitar erro silenciado, deploy manual frágil, dependência sem justificativa, feature sem métrica e “melhorar depois” sem registro verificável.
 
 Se um item não pode ser demonstrado, ele não está pronto: está declarado pronto. São coisas diferentes.
+
+## Condição de parada (/goal ou loop)
+
+- [ ] A condição exige prova impressa na conversa (saída de teste, contagem ou status), porque o juiz de /goal só lê a conversa.
+- [ ] Tem critério observável, nunca "ficou bom".
+- [ ] Tem teto de turnos ou de tempo.
+- [ ] Diz o que fazer se travar: parar e relatar, não insistir.
 
 ## Métrica
 
