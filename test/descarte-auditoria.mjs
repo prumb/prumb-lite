@@ -22,7 +22,11 @@ export async function testarAuditoria(hook) {
     for (const command of ['git -c color.ui=false reset --hard', 'git reset --quiet --hard', 'git reset -q --hard', 'git.exe reset --hard', 'GIT.EXE reset --hard', '"C:\\Git\\git.exe" reset --hard', 'git --no-pager -C . reset --hard']) {
       assert.equal(avaliar(command)?.permissionDecision, 'deny', command);
     }
-    for (const command of ['git reset --soft', 'git status', 'echo "git reset --hard"', 'git log -- reset', 'git restore --staged a.txt']) assert.equal(avaliar(command), null, command);
+    for (const command of ['(git reset --hard)', '{ git reset --hard; }', 'echo $(git reset --hard)', 'sh -c "git reset --hard"', 'bash -c "git reset --hard"', 'pwsh -Command "git reset --hard"', 'eval "git reset --hard"', 'env X=1 git reset --hard', 'X=1 git reset --hard', 'sudo git reset --hard', '/usr/bin/git reset --hard']) {
+      assert.equal(avaliar(command)?.permissionDecision, 'deny', command);
+    }
+    assert.equal(avaliar('bash -c "cd filho && git reset --hard"', root)?.permissionDecision, 'deny', 'cd dentro do intérprete');
+    for (const command of ['git reset --soft', 'git status', 'echo "git reset --hard"', 'git log -- reset', 'git restore --staged a.txt', 'bash -c "git status"', 'git commit -m "(reset --hard)"', 'git log --format="%h (%s)"']) assert.equal(avaliar(command), null, command);
     for (const cd of ['cd', 'pushd', 'Set-Location', 'sl', 'chdir']) {
       for (const sep of [';', '&&', '||', '|', '\n']) assert.equal(avaliar(`${cd} filho${sep}git reset --hard`, root)?.permissionDecision, 'deny');
     }

@@ -1,4 +1,24 @@
 #!/usr/bin/env node
+// PreToolUse (Bash|PowerShell) · barra o comando que DESCARTA trabalho não commitado.
+//
+// Comandos de descarte restauram a versão gravada e podem apagar trabalho local.
+// Por isso a guarda bloqueia as formas reconhecidas quando detecta alterações.
+// Uma instrução passiva pode ser ignorada; o bloqueio impede a execução reconhecida.
+//
+// FALHA PARA O LADO PERMISSIVO. Git ausente, diretório que não é repositório, saída
+// ilegível ou exceção deixam passar: um hook de segurança que trava o trabalho por
+// engano é pior que o problema que ele resolve, e seria desligado na primeira vez que
+// atrapalhasse. Única exceção: diretório dinâmico (cd "$X") antes de um descarte pede
+// confirmação, porque liberar pelo status do cwd errado seria falso verde.
+//
+// Fora daqui de propósito:
+//   `git checkout <branch>` e `git checkout -b`  · trocam de branch, não apagam nada
+//   `git restore --staged` sozinho               · tira do índice, o arquivo continua lá
+//   `git stash`                                  · esconde, mas é recuperável com pop
+//   drop e clear são tratados à parte: só passam com a lista de stash vazia.
+//
+// Pro e Lite carregam este arquivo idêntico; só PREFIXO muda.
+
 import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -22,12 +42,13 @@ function tokenizar(texto) {
       continue;
     }
     if (c === '"' || c === "'") { aspas = c; ativo = true; continue; }
-    if (/[;&|\r\n]/.test(c)) {
+    if (/[;&|\r\n(){}]/.test(c)) {
+      if (c === '(' && valor.endsWith('$')) dinamico = true;
       fechar(); if (tokens.length) comandos.push(tokens); tokens = []; continue;
     }
     if (/\s/.test(c)) { fechar(); continue; }
     ativo = true; valor += c;
-    if (/[$`()]/.test(c)) dinamico = true;
+    if (/[$`]/.test(c)) dinamico = true;
   }
   fechar(); if (tokens.length) comandos.push(tokens);
   return comandos;
@@ -41,15 +62,27 @@ function consultar(cwd, args) {
   } catch { return null; } // Git ausente, timeout ou fora de repo: sem evidência de perda.
 }
 
-export function avaliarDescarte(payload) {
+// Prefixos que só repassam o comando, e intérpretes que recebem o comando como texto.
+const PREFIXOS = ['env', 'command', 'sudo', 'nohup', 'time', 'exec', 'nice', 'builtin'];
+const INTERPRETES = { sh: '-c', bash: '-c', zsh: '-c', dash: '-c', cmd: '/c', pwsh: '-command', powershell: '-command' };
+
+export function avaliarDescarte(payload, herdado = false) {
   const entrada = payload?.tool_input ?? {};
   const cmd = String(entrada.command ?? '');
   let cwd = resolve(String(payload?.cwd ?? entrada.cwd ?? process.cwd()) || process.cwd());
-  let incerto = false;
+  let incerto = herdado;
   const pilha = [];
   const decisao = (tipo, motivo) => ({ permissionDecision: tipo, permissionDecisionReason: `${PREFIXO}: ${motivo}` });
-  for (const tokens of tokenizar(cmd)) {
-    const nome = tokens[0].valor.toLowerCase();
+  for (let tokens of tokenizar(cmd)) {
+    while (tokens.length > 1 && (PREFIXOS.includes(tokens[0].valor.toLowerCase()) || /^[A-Za-z_]\w*=/.test(tokens[0].valor))) tokens = tokens.slice(1);
+    const nome = tokens[0].valor.toLowerCase().replace(/\.exe$/, '').replace(/^.*[\\/]/, '');
+    const flag = INTERPRETES[nome];
+    const n = nome === 'eval' ? 0 : flag ? tokens.findIndex((t, k) => k > 0 && [flag, '-c'].includes(t.valor.toLowerCase())) : -1;
+    if (n >= 0 && tokens.length > n + 1) {
+      const interno = avaliarDescarte({ cwd, tool_input: { command: tokens.slice(n + 1).map(t => t.valor).join(' ') } }, incerto);
+      if (interno) return interno;
+      continue;
+    }
     if (['cd', 'pushd', 'set-location', 'sl', 'chdir'].includes(nome)) {
       if (nome === 'pushd') pilha.push({ cwd, incerto });
       const caminhos = tokens.slice(1).filter(t => !['/d', '-path', '-literalpath'].includes(t.valor.toLowerCase()));
