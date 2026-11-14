@@ -56,6 +56,8 @@ A trava permite comandos comuns, como `git status` e `git restore --staged`. Com
 
 Nos casos de avaliação do Prumb 0.11.0, as três lentes melhoraram o resultado da mesma tarefa; os percentuais descrevem esses casos, sem garantir resultados em outras tarefas.
 
+Remedido em 14/11/2026 no Prumb 0.16.0, com Sonnet e uma rodada por caso: tradeoffs 100% com e 0% sem; quality-bar 100% com e 0% sem; premortem 100% com e 50% sem. O gráfico segue o da 0.11.0, que teve três rodadas por caso.
+
 ## Amostra × Prumb completo
 
 | Recurso | Amostra | Prumb completo |
